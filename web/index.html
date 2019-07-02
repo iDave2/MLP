@@ -1,0 +1,57 @@
+<html lang="en-US">
+
+<head>
+  <meta charset="utf-8">
+  <title>Multilayer Perceptron</title>
+
+  <!-- TODO: Find out why this favicon business does not work. -->
+  <link rel="icon" sizes="32x32" type="image/png" href="/web/images/favicon.png">
+
+  <link rel="stylesheet" href="/web/styles/main.css" />
+  <script src="/web/scripts/main.js"></script>
+</head>
+
+<body onload="initialize()">
+
+  <header>
+    <h1>Multilayer Perceptron Demo</h1>
+  </header>
+
+  <section id="data">
+    <header>
+      <h2>Data</h2>
+    </header>
+    <article>
+
+      <div class="elements"></div>
+
+      <div class="controls">
+        <input type="number" id="index" name="index" value="0" autofocus>
+        <button type="submit" id="goButton">Go</button>
+        <div>
+          <!-- Column 3 Glue -->
+        </div>
+        <select id="dbName" name="dbName" autofocus>
+          <option selected>Training</option>
+          <option>Testing</option>
+        </select>
+      </div>
+    </article>
+
+    <div class="debug">
+      <div>88x88</div>
+      <div>88x88</div>
+    </div>
+  </section>
+
+  <section class="training">
+
+  </section>
+
+  <section class="testing">
+
+  </section>
+
+</body>
+
+</html>

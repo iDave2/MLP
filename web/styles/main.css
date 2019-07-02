@@ -1,0 +1,55 @@
+/* Something stylish for MLP demo. */
+
+html {
+  background-color: lightblue;
+}
+
+body {
+  background-color: antiquewhite;
+  margin: 1em;
+  padding: 1em;
+}
+
+body>header>h1 {
+  text-align: center;
+}
+
+header h2 {
+  margin-bottom: 0.1em;
+}
+
+article {
+  border: 0px solid black;
+}
+
+#data .elements {
+  background-color: rgba(116, 75, 61, .3);
+  display: flex;
+  overflow: scroll;
+  padding-bottom: 12px;
+}
+
+#data canvas {
+  background-color: DarkSalmon;
+  margin-right: 2px;
+}
+
+#data .controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr 10fr 1fr;
+}
+
+#data .debug {
+  display: flex;
+  margin-top: 2px;
+  justify-content: space-between;
+  visibility: hidden
+}
+
+#data .debug div {
+  background-color: pink;
+  height: 88px;
+  line-height: 88px;
+  text-align: center;
+  width: 88px;
+}

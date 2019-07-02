@@ -1,0 +1,18 @@
+{
+  "name": "mlp",
+  "version": "0.1.0",
+  "description": "Multilayer Perceptron (demo)",
+  "main": "mlp.js",
+  "scripts": {
+    "test": "test/mnist.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "author": "dave",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^5.16.0"
+  }
+}
