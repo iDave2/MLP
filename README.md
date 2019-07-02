@@ -7,7 +7,8 @@ scrollbar.  The rest should be easier.  :)
 
 To run, download and unzip [MNIST][3] databases into an MNIST
 subdirectory of this one or create an MNIST link here that
-locates your unzipped downloads.
+locates your unzipped downloads.  Run "npm install" to get
+all the node modules (only required first time).
 
 Then you can run tests from command line,
 ```bash
