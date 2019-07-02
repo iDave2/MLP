@@ -374,7 +374,7 @@ class State {
 
     if (this.count === 0) return
 
-    // Pure numbers, ratios for converting between coordinate systems.
+    // Common ratios for converting between coordinate systems.
 
     this.dw_sw = this.count / container.scrollWidth
     this.sw_dw = container.scrollWidth / this.count
