@@ -1,7 +1,7 @@
 # Multilayer Perceptrons (MLP)
 
 Inspired by delightful tutorials from [3blue1brown][1] and
-[Michael Neilsen][2], this project targets a `nodejs` port
+[Michael Nielsen][2], this project targets a `nodejs` port
 of the same.  So far, it is just a scrollbar.  A really cool
 scrollbar.  The rest should be easier.  :)
 
