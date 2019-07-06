@@ -546,7 +546,7 @@ const CS = new State() // The current state, only one so far.
  *
  *  Called when page first loads, this method initializes state.
  */
-function initialize() {
+function initData() {
 
   container = document.querySelector('#data .elements')
   container.addEventListener('scroll', onScroll)

@@ -1,0 +1,9 @@
+/********************************************************************
+ *  Style rules for "training" section.
+*/
+
+.training div {
+  background-color: rgba(116, 75, 61, .3);
+  height: 100px;
+ width: 100%;
+}
