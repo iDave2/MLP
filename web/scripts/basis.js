@@ -14,49 +14,51 @@ function initTraining() {
   div = document.querySelector(".training div")
 
   button = document.getElementById('goTraining')
-  button.addEventListener('click', onGoTraining)
+  button.addEventListener('click', onClickTraining)
 }
 
-function onGoTraining(event) {
+function onClickTraining(event) {
   startTime = Date.now()
   runBasisA()
 }
 
 function log(what) {
-
-  let elapsed = Date.now() - startTime
-  elapsed = Math.floor(Math.round(elapsed * 1000)) / 1000
-
-  const message = `<p>${elapsed}: ${what}</p>`
-  div.innerHTML += message
+  let elapsed = Date.now() - startTime // milliseconds
+  div.innerHTML += `<p>${elapsed}: ${what}</p>`
   div.scrollTop = div.scrollHeight
 }
 
 async function runBasisA() {
-  //console.dir(div)
   log(`Running basisA`)
-  log(`Set database to "training"`)
   try {
+    log(`Set database to "training"`)
     await setDatabaseA('training')
+    log(`Train`)
     await train()
+    log('Finished running basisA')
     //return 'Do not forget to return something!'
   } catch (err) {
     log(`Error from somewhere: ${err}`)
   }
 }
 
-let index = 0
-
 async function train() {
   log(`Program allegedly training now...`)
   const reader = readerA()
-  for await (element of reader) {
-    log(`Got element ${index++} (${element}) from readerA!`)
+  let index = -1
+  for await (let element of reader) {
+    ++index
+    if (index % 1000 === 0) {
+      // log(`index > 0, index % 10 is ${index % 10}`)
+      log(`Got element ${index} "${element}" from readerA`)
+    // } else {
+    //   log(`index %10 nonzero`)
+    }
   }
 }
 
 async function* readerA(begin = 0, count = null) {
-  for (let i = 0; i < 5; ++i)
+  for (let i = 0; i < 2001; ++i)
     yield i
 }
 
