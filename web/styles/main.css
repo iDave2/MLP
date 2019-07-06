@@ -40,10 +40,10 @@ article {
 }
 
 #data .debug {
-  display: flex;
+  /* display: flex; */
+  display: none;
   margin-top: 2px;
   justify-content: space-between;
-  visibility: hidden
 }
 
 #data .debug div {
