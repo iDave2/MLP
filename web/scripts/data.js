@@ -22,7 +22,7 @@
  *    0x40 - dump current state on click Go
  *    0x80 - watch countHint() and its computation
  */
-const debug = 0x00
+const debug = 0x01
 
 // MNIST databases on server.
 

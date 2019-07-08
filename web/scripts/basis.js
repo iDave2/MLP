@@ -3,6 +3,15 @@
  *  #category-dimensional space.
  */
 
+'use strict'
+
+/*
+ *  Debugging aid, a bitmap that activates:
+ *
+ *    0x01 - log fetch activity
+ */
+// TODO: we need namespaces, this debug is global, causes errors.
+const myDebug = 0x01
 
 let button = null
 let div = null
@@ -44,6 +53,61 @@ async function runBasisA() {
 
 async function train() {
   log(`Program allegedly training now...`)
+
+  const params = new URLSearchParams({
+    begin: 0,
+    count: 2,
+  })
+  const init = {
+    method: 'POST',
+    body: params,
+  }
+  if (myDebug & 0x01) console.group("fetch('/getElements')")
+  fetch('/getElements', init)
+    .then(response => {
+      if (myDebug & 0x01) {
+        console.debug("response.headers.get('Content-Length') = "
+          + response.headers.get('Content-Length')
+          + '\n  // this is null when total length is unknown')
+      }
+      let body = response.body
+      let reader = body.getReader()
+      return reader
+    })
+    .then(reader => {
+      /*
+       *  Nodejs stream.Readable is asyncIterable.
+       *  JavaScript ReadableStream is not?
+       *  So try wrapping it in an asynchronous blanket.
+       */
+      async function* asyncReader(bookWorm) {
+        yield bookWorm.read()
+      }
+      return asyncReader(reader)
+      // return async function* (reader)
+
+      // for await (const data of reader) {
+      //   console.debug(`got some data, done = ${data.done}`)
+      // }
+      // return 'something'
+
+      // Yay! This works.
+      // let test = await reader.read()
+      // let foo = test
+      // return foo
+
+    })
+    .then(async function (asyncIterator) {
+      for await (let data of asyncIterator) {
+        if (myDebug & 0x01) console.debug('got a chunk')
+      }
+    })
+    .finally(() => {
+      if (myDebug & 0x01) console.groupEnd()
+    })
+
+  return
+
   const reader = readerA()
   let index = -1
   for await (let element of reader) {
