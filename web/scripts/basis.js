@@ -51,15 +51,49 @@ async function train() {
     if (index % 1000 === 0) {
       // log(`index > 0, index % 10 is ${index % 10}`)
       log(`Got element ${index} "${element}" from readerA`)
-    // } else {
-    //   log(`index %10 nonzero`)
+      // } else {
+      //   log(`index %10 nonzero`)
     }
   }
 }
 
 async function* readerA(begin = 0, count = null) {
-  for (let i = 0; i < 2001; ++i)
-    yield i
+
+  if (count === null) count = 60000
+  console.error(`readerA: count is ${count}`)
+
+  let xhr = new XMLHttpRequest;
+  console.log('UNSENT: ', xhr.status);
+
+  xhr.open("POST", '/getElements');
+  console.log('OPENED: ', xhr.status);
+
+  xhr.setRequestHeader('Content-Type', 'text/plain')
+  xhr.responseType = "arraybuffer";
+
+  const params = new URLSearchParams()
+  params.append('begin', begin)
+  params.append('count', count)
+
+  xhr.onprogress = function (event) {
+    const arrayBuffer = xhr.response;
+    const uint8 = new Uint8Array(arrayBuffer)
+    const responseSize = uint8.length
+    console.log(`PROGRESS: xhr.status ${xhr.status}`
+      + `, response length = ${responseSize}`
+      + `, event.loaded ${event.loaded}`
+      + `, event.total ${event.total}`)
+    //    yield 2
+  };
+
+  xhr.onload = function (event) {
+    console.log('LOAD (DONE): xhr.status = ' + xhr.status
+      + `, xhr.responseSize ${xhr.responseSize}`
+      + `, event.loaded ${event.loaded}`)
+    //    yield 'XHR_ON_LOAD'
+  };
+
+  xhr.send(params);
 }
 
 /////////////////////////////////////////////////////////////////////
