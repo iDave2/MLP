@@ -32,7 +32,9 @@ const server = http.createServer((request, response) => {
   if (method === 'POST') {
 
     let body = [];
-    request.on('data', chunk => body.push(chunk))
+    request.on('data', function(chunk) {
+       body.push(chunk)
+    })
     request.on('end', () => {
 
       body = Buffer.concat(body).toString();

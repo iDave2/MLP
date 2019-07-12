@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/**
+/*-------------------------------------------------------------------
  *  This is a test script.  Its import paths are relative to this
  *  test directory but, otherwise, paths are relative to main npm
  *  package folder, one level up (or perhaps wherever you run
@@ -16,68 +16,16 @@
 
 const fs = require('fs')
 const IDX = require('../lib/idx')
-
 const { collate, bySize } = require('../lib/streamutils')
 
-const debug = 0x01  // Use hex bits like 0x01.
-
-// Process any command . Remember, for npm, the rubadub
+// Process any command line. Remember, for npm, the rubadub
 // is "npm test -- --arg1=foo --arg2=bar etc."
 
-const options = {
-  begin: 0,
-  count: null,
-  database: 'training',
-}
-
-const lookup = {} // Match least ambiguous name.
-for (const key of ['begin', 'count', 'database'])
-  for (let i = 0; i < key.length; ++i)
-    lookup[key.substr(0, 1 + i)] = key
-
-for (let i = 2; i < process.argv.length; ++i) {
-  const arg = process.argv[i]
-  let name = null, value = null
-  const match = /^--?(\w+)((\s*=\s*)(\w+)$)?/.exec(arg)
-  if (match) {
-    name = lookup[match[1].toLowerCase()]
-    if (match[4]) value = match[4]
-  }
-  if (!name)
-    usage(`Syntax error near "${arg}"`)
-  if (!value) {
-    value = process.argv[++i]
-    if (value === null || typeof value === 'undefined')
-      usage(`Value not found for parameter "${name}"`)
-  }
-  options[name] = value
-}
-
-// Validate input a little bit.
-
-if (options.begin < 0)
-  usage(`Value of "begin" must be a positive integer`)
-if (options.database !== 'training' && options.database !== 'testing')
-  usage(`Value of "--database" must be "training" or "testing"`)
-
-// Print usage summary if input looks fishy (see above)
-
-function usage(message) {
-  if (message)
-    console.error(message)
-  console.error()
-  const fileName = __filename.replace(/.*[\\\/]/, '')
-  console.error(`usage: ${fileName}`
-    + ` [--b|egin=<beginIndex>]`
-    + ` [--c|ount=<elementCount>]`
-    + ` [--d|atabase=<'training'|'testing'>]\n`
-  )
-  process.exit(1)
-}
+const options = processCommandLine(process.argv.slice(2))
 
 // Define and initialize data streams.
 
-const inputs = {
+const database = {
 
   'training': {
     'images': {
@@ -105,12 +53,12 @@ const inputs = {
 function loadIndex(forThis) {
   return forThis.idx = new IDX(forThis.fileName, options.begin, options.count)
 }
-const imgX = loadIndex(inputs[options.database].images)
-const lblX = loadIndex(inputs[options.database].labels)
-// const imgX = loadIndex(inputs.testing.images)
-// const lblX = loadIndex(inputs.testing.labels)
+const imgX = loadIndex(database[options.database].images)
+const lblX = loadIndex(database[options.database].labels)
+
 const indices = [imgX, lblX]
 let totalLengths = new Array(indices.length).fill(0)
+
 const streams = [ // Really iterators over streams.
   bySize(imgX.reader, imgX.size),
   bySize(lblX.reader, lblX.size)
@@ -119,27 +67,27 @@ const reader = collate(streams) // A multiplexer.
 
 main(reader)
 
+//-------------------------------------------------------------------
+
 async function main(reader) {
   try {
     for await (const data of reader) {
-      if (debug & 0x01) { // Count the beans?
-        const lengths = [], formatted = []
-        for (let i = 0; i < data.length; ++i) {
-          lengths.push(data[i] ? data[i].length : 0)
-          formatted.push(formatBuffer(data[i], lengths[i]))
-          totalLengths[i] += lengths[i]
-        }
-        /*
-         *  Read console documentation before you die. console.debug?
-         *  Try here for starters,
-         *
-         *    https://developer.mozilla.org/en-US/docs/Web/API/Console/log
-         */
-        let message = formatted.reduce((accumulator, current) => {
-          return accumulator + ', ' + current
-        })
-        console.log(`Received ${message}`)
+      const lengths = [], formatted = []
+      for (let i = 0; i < data.length; ++i) {
+        lengths.push(data[i] ? data[i].length : 0)
+        formatted.push(formatBuffer(data[i], lengths[i]))
+        totalLengths[i] += lengths[i]
       }
+      /*
+       *  Read console documentation before you die. console.debug?
+       *  Try here for starters,
+       *
+       *    https://developer.mozilla.org/en-US/docs/Web/API/Console/log
+       */
+      let message = formatted.reduce((accumulator, current) => {
+        return accumulator + ', ' + current
+      })
+      console.log(`Received ${message}`)
     }
     // throw Error('Force error inside promise to watch fireworks')
   }
@@ -188,17 +136,17 @@ async function main(reader) {
     throw reject
   }
   finally {
-    if (debug & 0x01) {
-      let i = 0, comma = '', pretty = ''
-      for (; i < totalLengths.length; ++i, comma = ', ') {
-        const length = totalLengths[i]
-        const size = indices[i].size
-        pretty += comma + length / size + ' x ' + size
-      }
-      console.log(`Total bytes received = [${pretty}]`)
+    let i = 0, comma = '', pretty = ''
+    for (; i < totalLengths.length; ++i, comma = ', ') {
+      const length = totalLengths[i]
+      const size = indices[i].size
+      pretty += comma + length / size + ' x ' + size
     }
+    console.log(`Total bytes received = [${pretty}]`)
   }
 }
+
+//-------------------------------------------------------------------
 
 function formatBuffer(buffy, buffyLength, windowLength = 5) {
   if (buffyLength === 0) {
@@ -216,6 +164,64 @@ function formatBuffer(buffy, buffyLength, windowLength = 5) {
   if (buffyLength > windowLength)
     peek = '...,' + peek + ',...'
   return '[' + peek + ']'
+}
+
+//-------------------------------------------------------------------
+
+function processCommandLine(args) {
+
+  const defaults = {
+    database: 'training',
+    begin: 0,
+    count: null,  // Defaults to entire database.
+  }
+  const options = defaults  // Returned to caller.
+
+  const lookup = {} // Match least ambiguous name.
+  for (const key of ['begin', 'count', 'database'])
+    for (let i = 0; i < key.length; ++i)
+      lookup[key.substr(0, 1 + i)] = key
+
+  for (let i = 0; i < args.length; ++i) {
+    let name = null, value = null
+    const match = /^--?(\w+)((\s*=\s*)(\w+)$)?/.exec(args[i])
+    if (match) {
+      name = lookup[match[1].toLowerCase()]
+      if (match[4]) value = match[4]
+    }
+    if (!name)
+      usage(`Syntax error near "${args[i]}"`)
+    if (!value) {
+      value = args[++i]
+      if (value === null || typeof value === 'undefined')
+        usage(`Value not found for parameter "${name}"`)
+    }
+    options[name] = value
+  }
+
+  // Validate input a little bit.
+
+  if (options.begin < 0)
+    usage(`Value of "begin" must be a positive integer`)
+  if (options.database !== 'training' && options.database !== 'testing')
+    usage(`Value of "--database" must be "training" or "testing"`)
+
+  return options
+}
+
+//-------------------------------------------------------------------
+
+function usage(message) {
+  if (message)
+    console.error(message)
+  console.error()
+  const fileName = __filename.replace(/.*[\\\/]/, '')
+  console.error(`usage: ${fileName}`
+    + ` [--b|egin=<beginIndex>]`
+    + ` [--c|ount=<elementCount>]`
+    + ` [--d|atabase=<'training'|'testing'>]\n`
+  )
+  process.exit(1)
 }
 
 // This is the first message logged.  :)

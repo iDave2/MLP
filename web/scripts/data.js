@@ -927,13 +927,18 @@ function _getElements(resolve, reject, begin, count, prepend) {
 
   // Make the request.
 
-  var xhr = new XMLHttpRequest();
+  let xhr = new XMLHttpRequest();
   xhr.open("POST", '/getElements');
-  xhr.setRequestHeader('Content-Type', 'text/plain')
+  xhr.setRequestHeader('Content-type', 'text/plain')
   xhr.responseType = "arraybuffer";
-  const params = new URLSearchParams()
-  params.append('begin', begin)
-  params.append('count', count)
+  // const params = new URLSearchParams()
+  // params.append('begin', begin)
+  // params.append('count', count)
+  var form = {
+    begin: begin,
+    count: count,
+  }
+  const params = new URLSearchParams(form)
 
   /*
    *  Node seems to return all requested elements in one fell

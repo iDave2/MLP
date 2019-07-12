@@ -17,6 +17,46 @@ let button = null
 let div = null
 let startTime = null // milliseconds
 
+// Put this, or facsimile, in a utilities module somewhere...
+function whatis(it) {
+
+  function findName(that) { // assuming that instanceof Object
+    if (that.hasOwnProperty('prototype')) { // a function
+      if (that.hasOwnProperty('name') && typeof that.name === 'string')
+        return that.name + '()'   // always shadowed?
+      else {
+        if (that.prototype.hasOwnProperty('constructor'))
+          return that.prototype.constructor.name + '()' // original name
+        else
+          return '()' // MDN examples sometimes whack entire prototype...
+      }
+    }
+    if (that.hasOwnProperty('constructor')) // inherited function prototype
+      return that.constructor.name + '()'
+    return typeof that // object or primitive
+  }
+
+  let what
+  if (it === null) {
+    what = 'null object'
+  } else if (it instanceof Object) {
+    what = findName(it)
+    for (let i = 0; i < 15; ++i) { // avoid infinity
+      let proto = Object.getPrototypeOf(it) // __proto__, not prototype
+      if (proto === null)
+        break // end of chain
+      what += ` -> ${findName(proto)}`
+      it = proto
+    }
+  } else {
+    what = typeof it  // includes undefined
+  }
+
+  console.log(what)
+}
+
+/////////////////////////////////////////////////////////////////////
+
 function initTraining() {
   console.log('Welcome to init training')
 
@@ -37,7 +77,20 @@ function log(what) {
   div.scrollTop = div.scrollHeight
 }
 
+/////////////////////////////////////////////////////////////////////
+
+
 async function runBasisA() {
+  fetchElements('training', 0)
+    .then(async function (reader) {
+      console.debug('runBasisA: reader = %o', reader)
+      for await (const {value, done} of reader) {
+        console.debug('got a chunk, length = ' + value.length
+          + ', done = ' + done)
+      }
+      console.debug('done with for await')
+    })
+  return
   log(`Running basisA`)
   try {
     log(`Set database to "training"`)
@@ -50,6 +103,51 @@ async function runBasisA() {
     log(`Error from somewhere: ${err}`)
   }
 }
+
+/////////////////////////////////////////////////////////////////////
+
+class AsyncReader {
+  constructor(reader) {
+    this.reader = reader // stream.getReader() // and locked...
+    this[Symbol.asyncIterator] = async function* () {
+      yield this.reader.read()
+    }
+    this.thing = this[Symbol.asyncIterator](this.reader)
+  }
+  read() {
+    return this.reader.read()
+  }
+}
+
+/////////////////////////////////////////////////////////////////////
+
+function fetchElements(database = 'training', begin = 0, count = null) {
+  var test = JSON.stringify({
+    database: database,
+    begin: begin,
+    count: count,
+  })
+  const params = new URLSearchParams({
+    database: database,
+    begin: begin,
+    count: count,
+  })
+  const init = {
+    method: 'POST',
+    body: params,
+  }
+  if (myDebug & 0x01) {
+    console.debug('fetchElements(' + database + ', '
+      + begin + ', ' + count + ')')
+  }
+  return fetch('/getElements', init)
+    .then(response => {
+      console.debug('fetchElements: response = %o', response)
+      return new AsyncReader(response.body.getReader())
+    })
+}
+
+/////////////////////////////////////////////////////////////////////
 
 async function train() {
   log(`Program allegedly training now...`)
@@ -70,20 +168,34 @@ async function train() {
           + response.headers.get('Content-Length')
           + '\n  // this is null when total length is unknown')
       }
-      let body = response.body
-      let reader = body.getReader()
-      return reader
+
+      // let defaultReader = response.body.getReader()
+
+      // let test1 = (async function* asyncReader(reader) {
+      //   this.reader = reader
+      //   this.read = function() { return this.reader.read() }
+      //   yield this.reader.read()
+      // })(defaultReader)
+
+      let test2 = new AsyncReader(response.body)
+
+      return test2
     })
-    .then(reader => {
+    .then(async function (asyncReader) {
+      let foo = await asyncReader.read
+      // let foo = await asyncReader[Symbol.asyncIterator]
+      // let foo = await asyncReader.thing
+      let bar = 'none'
+
       /*
        *  Nodejs stream.Readable is asyncIterable.
        *  JavaScript ReadableStream is not?
        *  So try wrapping it in an asynchronous blanket.
        */
-      async function* asyncReader(bookWorm) {
-        yield bookWorm.read()
-      }
-      return asyncReader(reader)
+      // async function* asyncReader(bookWorm) {
+      //   yield bookWorm.read()
+      // }
+      // return asyncReader(reader)
       // return async function* (reader)
 
       // for await (const data of reader) {
