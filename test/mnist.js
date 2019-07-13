@@ -15,6 +15,8 @@
 'use strict'
 
 const fs = require('fs')
+const Database = require('../lib/Database')
+
 const Index = require('../lib/Index')
 const { collate, bySize } = require('../lib/streamutils')
 
@@ -25,45 +27,48 @@ const cli = processCommandLine(process.argv.slice(2))
 
 // Define and initialize data streams.
 
-const database = {
+// const database = {
 
-  'training': {
-    'images': {
-      fileName: 'MNIST/train-images-idx3-ubyte',
-      idx: null,
-    },
-    'labels': {
-      fileName: 'MNIST/train-labels-idx1-ubyte',
-      idx: null,
-    },
-  },
+//   'training': {
+//     'images': {
+//       fileName: 'MNIST/train-images-idx3-ubyte',
+//       idx: null,
+//     },
+//     'labels': {
+//       fileName: 'MNIST/train-labels-idx1-ubyte',
+//       idx: null,
+//     },
+//   },
 
-  'testing': {
-    'images': {
-      fileName: 'MNIST/t10k-images-idx3-ubyte',
-      idx: null,
-    },
-    'labels': {
-      fileName: 'MNIST/t10k-labels-idx1-ubyte',
-      idx: null,
-    },
-  },
-}
+//   'testing': {
+//     'images': {
+//       fileName: 'MNIST/t10k-images-idx3-ubyte',
+//       idx: null,
+//     },
+//     'labels': {
+//       fileName: 'MNIST/t10k-labels-idx1-ubyte',
+//       idx: null,
+//     },
+//   },
+// }
 
-function loadIndex(forThis) {
-  return forThis.idx = new Index(forThis.fileName)
-}
-const imgX = loadIndex(database[cli.database].images)
-const lblX = loadIndex(database[cli.database].labels)
+// function loadIndex(forThis) {
+//   return forThis.idx = new Index(forThis.fileName)
+// }
+// const imgX = loadIndex(database[cli.database].images)
+// const lblX = loadIndex(database[cli.database].labels)
 
-const indices = [imgX, lblX]
-let totalLengths = new Array(indices.length).fill(0)
+// const indices = [imgX, lblX]
+// let totalLengths = new Array(indices.length).fill(0)
 
-const streams = [ // Really iterators over streams.
-  bySize(imgX.getReader(cli.begin, cli.count), imgX.size),
-  bySize(lblX.getReader(cli.begin, cli.count), lblX.size)
-]
-const reader = collate(streams) // A multiplexer.
+// const streams = [ // Really iterators over streams.
+//   bySize(imgX.getReader(cli.begin, cli.count), imgX.size),
+//   bySize(lblX.getReader(cli.begin, cli.count), lblX.size)
+// ]
+// const reader = collate(streams) // A multiplexer.
+
+const database = new Database()
+const reader = database.getReader(cli.database)
 
 main(reader)
 
