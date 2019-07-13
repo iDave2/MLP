@@ -51,10 +51,10 @@ const database = {
 }
 
 function loadIndex(forThis) {
-  return forThis.idx = new Index(forThis.fileName, options.begin, options.count)
+  return forThis.idx = new Index(forThis.fileName)
 }
-const imgX = loadIndex(database[options.database].images)
-const lblX = loadIndex(database[options.database].labels)
+const imgX = loadIndex(database[cli.database].images)
+const lblX = loadIndex(database[cli.database].labels)
 
 const indices = [imgX, lblX]
 let totalLengths = new Array(indices.length).fill(0)
