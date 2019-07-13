@@ -138,6 +138,7 @@ function usage(message) {
 }
 
 // This is the first message logged.  :)
+
 console.log('LEAVING MAIN SCRIPT')
 
 // OLD NOTES - delete once you've forgotten what they mean.
