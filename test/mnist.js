@@ -28,11 +28,10 @@ const database = new Database()
 const indices = database.getIndices() // [imageIndex, labelIndex]
 let totalLengths = [0, 0]
 
-// Get database collator and do your main thing.
+// Get database collator/reader and do your main thing.
 
-const reader = database.getReader(cli.database, cli.begin, cli.count)
-
-main(reader)
+const collator = database.getReader(cli.database, cli.begin, cli.count)
+main(collator)
 
 //-------------------------------------------------------------------
 
@@ -45,21 +44,14 @@ async function main(reader) {
         formatted.push(formatBuffer(data[i], lengths[i]))
         totalLengths[i] += lengths[i]
       }
-      /*
-       *  Read console documentation before you die. console.debug?
-       *  Try here for starters,
-       *
-       *    https://developer.mozilla.org/en-US/docs/Web/API/Console/log
-       */
       let message = formatted.reduce((accumulator, current) => {
         return accumulator + ', ' + current
       })
       console.log(`Received ${message}`)
     }
-    // throw Error('Force error inside promise to watch fireworks')
   }
   catch (reject) {
-    throw reject
+    throw reject  // See old notes at bottom of file.
   }
   finally {
     let i = 0, comma = '', pretty = ''
@@ -125,12 +117,7 @@ function processCommandLine(args) {
     options[name] = value
   }
 
-  // Validate input a little bit.
-
-  if (options.begin < 0)
-    usage(`Value of "begin" must be a positive integer`)
-  if (options.database !== 'training' && options.database !== 'testing')
-    usage(`Value of "--database" must be "training" or "testing"`)
+  // Let Database and Index validate input, no need for extra wheels.
 
   return options
 }
