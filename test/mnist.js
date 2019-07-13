@@ -21,7 +21,7 @@ const { collate, bySize } = require('../lib/streamutils')
 // Process any command line. Remember, for npm, the rubadub
 // is "npm test -- --arg1=foo --arg2=bar etc."
 
-const options = processCommandLine(process.argv.slice(2))
+const cli = processCommandLine(process.argv.slice(2))
 
 // Define and initialize data streams.
 
@@ -60,8 +60,8 @@ const indices = [imgX, lblX]
 let totalLengths = new Array(indices.length).fill(0)
 
 const streams = [ // Really iterators over streams.
-  bySize(imgX.reader, imgX.size),
-  bySize(lblX.reader, lblX.size)
+  bySize(imgX.getReader(cli.begin, cli.count), imgX.size),
+  bySize(lblX.getReader(cli.begin, cli.count), lblX.size)
 ]
 const reader = collate(streams) // A multiplexer.
 
