@@ -9,7 +9,7 @@
       "request": "launch",
       "name": "test/mnist",
       "program": "${workspaceFolder}/test/mnist.js",
-      "args": ["-D", "testing"],
+      "args": ["-D", "testing", "-c", "10"],
     },
     {
       "type": "node",

@@ -15,7 +15,7 @@
 'use strict'
 
 const fs = require('fs')
-const IDX = require('../lib/idx')
+const Index = require('../lib/index')
 const { collate, bySize } = require('../lib/streamutils')
 
 // Process any command line. Remember, for npm, the rubadub
@@ -51,7 +51,7 @@ const database = {
 }
 
 function loadIndex(forThis) {
-  return forThis.idx = new IDX(forThis.fileName, options.begin, options.count)
+  return forThis.idx = new Index(forThis.fileName, options.begin, options.count)
 }
 const imgX = loadIndex(database[options.database].images)
 const lblX = loadIndex(database[options.database].labels)
