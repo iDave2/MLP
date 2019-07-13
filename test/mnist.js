@@ -17,58 +17,20 @@
 const fs = require('fs')
 const Database = require('../lib/Database')
 
-const Index = require('../lib/Index')
-const { collate, bySize } = require('../lib/streamutils')
-
 // Process any command line. Remember, for npm, the rubadub
 // is "npm test -- --arg1=foo --arg2=bar etc."
 
 const cli = processCommandLine(process.argv.slice(2))
 
-// Define and initialize data streams.
-
-// const database = {
-
-//   'training': {
-//     'images': {
-//       fileName: 'MNIST/train-images-idx3-ubyte',
-//       idx: null,
-//     },
-//     'labels': {
-//       fileName: 'MNIST/train-labels-idx1-ubyte',
-//       idx: null,
-//     },
-//   },
-
-//   'testing': {
-//     'images': {
-//       fileName: 'MNIST/t10k-images-idx3-ubyte',
-//       idx: null,
-//     },
-//     'labels': {
-//       fileName: 'MNIST/t10k-labels-idx1-ubyte',
-//       idx: null,
-//     },
-//   },
-// }
-
-// function loadIndex(forThis) {
-//   return forThis.idx = new Index(forThis.fileName)
-// }
-// const imgX = loadIndex(database[cli.database].images)
-// const lblX = loadIndex(database[cli.database].labels)
-
-// const indices = [imgX, lblX]
-// let totalLengths = new Array(indices.length).fill(0)
-
-// const streams = [ // Really iterators over streams.
-//   bySize(imgX.getReader(cli.begin, cli.count), imgX.size),
-//   bySize(lblX.getReader(cli.begin, cli.count), lblX.size)
-// ]
-// const reader = collate(streams) // A multiplexer.
+// Load database and bookmark indices for user feedback.
 
 const database = new Database()
-const reader = database.getReader(cli.database)
+const indices = database.getIndices() // [imageIndex, labelIndex]
+let totalLengths = [0, 0]
+
+// Get database collator and do your main thing.
+
+const reader = database.getReader(cli.database, cli.begin, cli.count)
 
 main(reader)
 
@@ -97,47 +59,6 @@ async function main(reader) {
     // throw Error('Force error inside promise to watch fireworks')
   }
   catch (reject) {
-    /*
-     *  Node emits these crash warnings about how bad programmers are
-     *  for not catching rejected promises.  If you plan to rethrow, I
-     *  think it needs to happen Outside uppermost async in order to
-     *  cancel the warning.
-     *
-     *  Sorry, Charlie, this makes no difference.  Node evidently does
-     *  not want to catch Any rejected promise, even if you are doing so
-     *  outside of any asynchronous context.  Hmm...
-     *
-     *  Yikes!  Node emits fearmongering even if we just print a message
-     *  in our catch that is outside any async stuff.  What is Ms. Node
-     *  thinking?  Here is the message:
-     *
-     *  (node:82425) UnhandledPromiseRejectionWarning: Error: Forced
-     *    error inside promise
-     *    at main (/Users/Name/Developer/MLP/app.js:100:9)
-     *    at processTicksAndRejections (internal/process/task_queues.js:89:5)
-     *  (node:82425) UnhandledPromiseRejectionWarning: Unhandled promise
-     *    rejection. This error originated either by throwing inside of
-     *    an async function without a catch block, or by rejecting a
-     *    promise which was not handled with .catch(). (rejection id: 1)
-     *  (node:82425) [DEP0018] DeprecationWarning: Unhandled promise
-     *    rejections are deprecated. In the future, promise rejections
-     *    that are not handled will terminate the Node.js process with
-     *    a non-zero exit code.
-     *
-     *  Methinks node emits this way too low.  It should let exceptions
-     *  trickle up and out to the first handler.  THEN if it has not
-     *  been caught, print scary messages.  OTHERWISE, programmers would
-     *  need to litter (litter?) code with try blocks for every possible
-     *  combination of promissory code and promises can go deeper than
-     *  stack frames.  Maybe.
-     *
-     *  Correction.  My catcher is reached when attached directly to the
-     *  'for await...of' above.  You still get scary message if error is
-     *  rethrown here but at least this is where you could recover.  And
-     *  it still seems unusual: exceptions have trickled up the stack
-     *  since the Red Sea was allegedly parted.
-     */
-    // console.error('Hello World')
     throw reject
   }
   finally {
@@ -231,3 +152,46 @@ function usage(message) {
 
 // This is the first message logged.  :)
 console.log('LEAVING MAIN SCRIPT')
+
+// OLD NOTES - delete once you've forgotten what they mean.
+
+/*
+ *  Node emits these crash warnings about how bad programmers are
+ *  for not catching rejected promises.  If you plan to rethrow, I
+ *  think it needs to happen Outside uppermost async in order to
+ *  cancel the warning.
+ *
+ *  Sorry, Charlie, this makes no difference.  Node evidently does
+ *  not want to catch Any rejected promise, even if you are doing so
+ *  outside of any asynchronous context.  Hmm...
+ *
+ *  Yikes!  Node emits fearmongering even if we just print a message
+ *  in our catch that is outside any async stuff.  What is Ms. Node
+ *  thinking?  Here is the message:
+ *
+ *  (node:82425) UnhandledPromiseRejectionWarning: Error: Forced
+ *    error inside promise
+ *    at main (/Users/Name/Developer/MLP/app.js:100:9)
+ *    at processTicksAndRejections (internal/process/task_queues.js:89:5)
+ *  (node:82425) UnhandledPromiseRejectionWarning: Unhandled promise
+ *    rejection. This error originated either by throwing inside of
+ *    an async function without a catch block, or by rejecting a
+ *    promise which was not handled with .catch(). (rejection id: 1)
+ *  (node:82425) [DEP0018] DeprecationWarning: Unhandled promise
+ *    rejections are deprecated. In the future, promise rejections
+ *    that are not handled will terminate the Node.js process with
+ *    a non-zero exit code.
+ *
+ *  Methinks node emits this way too low.  It should let exceptions
+ *  trickle up and out to the first handler.  THEN if it has not
+ *  been caught, print scary messages.  OTHERWISE, programmers would
+ *  need to litter (litter?) code with try blocks for every possible
+ *  combination of promissory code and promises can go deeper than
+ *  stack frames.  Maybe.
+ *
+ *  Correction.  My catcher is reached when attached directly to the
+ *  'for await...of' above.  You still get scary message if error is
+ *  rethrown here but at least this is where you could recover.  And
+ *  it still seems unusual: exceptions have trickled up the stack
+ *  since the Red Sea was allegedly parted.
+ */
