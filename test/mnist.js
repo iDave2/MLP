@@ -15,7 +15,7 @@
 'use strict'
 
 const fs = require('fs')
-const Index = require('../lib/index')
+const Index = require('../lib/Index')
 const { collate, bySize } = require('../lib/streamutils')
 
 // Process any command line. Remember, for npm, the rubadub
