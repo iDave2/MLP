@@ -234,7 +234,7 @@ class State {
    *
    *  @param {string} goal type of count desired, default is **nominal**
    */
-  countHint(goal) {
+  countHint(goal = 'nominal') {
 
     if (this.length) return this.length
 
@@ -604,7 +604,7 @@ function onChange(event) {
   /*
    * Set an initial buffer size, at least first time here.
    */
-  CS.length = CS.countHint('smaller')
+  CS.length = CS.countHint()
   /*
    *  Fetch new data.
    */
@@ -705,7 +705,6 @@ function onScroll(event) {
   // Database coordinates: elements [begin, begin + count).
 
   const focus = CS.focus // Update displayed location.
-  console.log(`onScroll: CS.count is ${CS.count}, focus is ${focus}`)
   indexInput.value = Math.round(focus)
 
   // Scroll coordinates: pixels [0, scroll.width).
@@ -941,7 +940,7 @@ function getElements(table, begin = 0, count = null, prepend = false) {
       _getElements(_resolve, _reject, table, begin, count, prepend)
     })
       .then(finalFocus => {
-        console.log(`GE: finalFocus is ${finalFocus}`)
+        // console.log(`GE: finalFocus is ${finalFocus}`)
         CS.refresh()
         resolve(finalFocus)
       })
