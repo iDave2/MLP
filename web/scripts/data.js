@@ -27,13 +27,23 @@
 const debug = 0x00
 
 // MNIST databases on server.
+// getDatabase() loads this at startup.
 
-const database = {
-  table: null,    // 'training' or 'testing'
-  length: NaN,    // Number of elements in database.
-  height: 28,     // Height of one image (in bytes).
-  width: 28,      // Width of one image (in bytes).
+let database = {
+  training: {
+    table: 'training',
+    length: NaN,    // Number of elements in database.
+    width: NaN,     // Width of one image (in bytes).
+    height: NaN,    // Height of one image (in bytes).
+  },
+  testing: {
+    table: 'testing',
+    length: NaN,    // Number of elements in database.
+    width: NaN,     // Width of one image (in bytes).
+    height: NaN,    // Height of one image (in bytes).
+  }
 }
+let dbData = database.training // Active scrollbar database.
 
 // Webpage #data widgets.
 
@@ -560,9 +570,11 @@ function initData() {
 
   dbSelector = document.getElementById('table')
   dbSelector.addEventListener('change', function (event) {
-    setDatabase(dbSelector.value)
+    const table = dbSelector.value.toLowerCase()
+    dbData = database[table]
+    //getDatabase(dbSelector.value)
   })
-  setDatabase(dbSelector.value)
+  getDatabase()
 }
 
 /********************************************************************
@@ -993,43 +1005,44 @@ function _getElements(resolve, reject, table, begin, count, prepend) {
 }
 
 /********************************************************************
- *  Method sets database to the given name and loads initial buffer.
+ *  Method loads database table meta-info into database object
+ *  at top of this file.
  *
  *  @param {*} table name of database table to load
  */
-function setDatabase(table = 'training') {
+function getDatabase(table = 'training') {
 
-  // Fake this during server switchover to Database and Index.
+  // // Fake this during server switchover to Database and Index.
 
-  switch (table.toLowerCase()) {
-    default: // fall through
-    case 'training':
-      database.table = 'training'
-      database.length = 60000
-      break
-    case 'testing':
-      database.table = 'testing'
-      database.length = 10000
-      break
-  }
+  // switch (table.toLowerCase()) {
+  //   default: // fall through
+  //   case 'training':
+  //     database.table = 'training'
+  //     database.length = 60000
+  //     break
+  //   case 'testing':
+  //     database.table = 'testing'
+  //     database.length = 10000
+  //     break
+  // }
 
-  // Set an initial buffer size.
+  // // Set an initial buffer size.
 
-  CS.length = CS.countHint('smaller')
+  // CS.length = CS.countHint('smaller')
 
-  // Fetch initial scrollbar data.
+  // // Fetch initial scrollbar data.
 
-  getElements('training', 0, CS.length)
+  // getElements('training', 0, CS.length)
 
-  return
+  // return
 
   return new Promise((resolve, reject) => {
     new Promise((_resolve, _reject) => {
 
-      _setDatabase(_resolve, _reject, table)
+      _getDatabase(_resolve, _reject /*, table */)
 
     }).then(chatter => {
-      // console.log(`SD: chatter = "${chatter}"`)
+
       /*
        * Clear out old data, fetch new data. This appeared to
        * disable scrolling yesterday, now its fine, go figure..
@@ -1062,20 +1075,19 @@ function setDatabase(table = 'training') {
   })
 }
 
-function _setDatabase(resolve, reject, table) {
-
-  if (table) table = table.toLowerCase()
+function _getDatabase(resolve, reject /*, table*/) {
 
   var xhr = new XMLHttpRequest();
-  xhr.open("POST", '/setDatabase');
+  xhr.open("POST", '/getDatabase');
   xhr.setRequestHeader('Content-Type', 'text/plain')
-  const params = new URLSearchParams()
-  params.append('table', table)
+  // const params = new URLSearchParams()
+  // params.append('table', table)
 
   xhr.onload = function (event) {
     if (xhr.status !== 200) {
       reject(`Trouble setting database to '${table}': ${xhr.responseText}`)
     } else {
+      const body = JSON.parse(xhr.response)
       database.table = table
       const lines = xhr.response.split('\n')
       lines.forEach(line => {
@@ -1092,7 +1104,7 @@ function _setDatabase(resolve, reject, table) {
     }
   }
 
-  xhr.send(params)
+  xhr.send()
 }
 
 /* __END__

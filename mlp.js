@@ -32,14 +32,19 @@ const server = http.createServer((request, response) => {
   if (method === 'POST') {
 
     let body = [];
-    request.on('data', function(chunk) {
-       body.push(chunk)
+    request.on('data', function (chunk) {
+      body.push(chunk)
     })
     request.on('end', () => {
 
       body = Buffer.concat(body).toString();
 
-      if (url === '/getElements') {
+      if (url === '/getDatabase') {
+
+        const usp = new URLSearchParams(body)
+        xhr.getDatabase(request, response)
+
+      } else if (url === '/getElements') {
 
         // Use conservative defaults if input is skunky.
         const usp = new URLSearchParams(body)
@@ -47,13 +52,6 @@ const server = http.createServer((request, response) => {
         const begin = usp.has('begin') ? usp.get('begin') : 0
         const count = usp.has('count') ? usp.get('count') : 1
         xhr.getElements(request, response, table, begin, count)
-
-      } else if (url === '/setDatabase') {
-
-        const usp = new URLSearchParams(body)
-        const table = usp.has('table') ?
-          usp.get('table') : 'no db table name?'
-        xhr.setDatabase(request, response, table)
 
       } else {
 
