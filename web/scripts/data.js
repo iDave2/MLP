@@ -585,20 +585,24 @@ function initData() {
 }
 
 /********************************************************************
- *  **onchange** event handler that lets user scroll through
- *  a different database table.
+ *  **onchange** event handler lets user scroll through
+ *  different database tables.
  */
 function onChange(event) {
   const table = dbSelector.value.toLowerCase()
   dbTable = database[table]
   /*
-   * Clear out old data, fetch new data. This appeared to
-   * disable scrolling yesterday, now its fine, go figure..
+   *  Disable onscroll listener; reenable when done.  This STILL does
+   *  not work in Chrome circa 190714 but is fine on Safari.
+   */
+  container.removeEventListener('scroll', onScroll)
+  /*
+   * Clear out any old data.
    */
   while (CS.count)
     CS.pop()
   /*
-   * Set an initial buffer size.
+   * Set an initial buffer size, at least first time here.
    */
   CS.length = CS.countHint('smaller')
   /*
@@ -616,9 +620,7 @@ function onChange(event) {
    * BTW, this happens in Chrome, have not reproduced in
    * Safari yet, go Safari.
    */
-  container.removeEventListener('scroll', onScroll)
   container.addEventListener('scroll', onScroll)
-
 }
 
 /********************************************************************
@@ -694,8 +696,9 @@ function onClick(event) {
  */
 function onScroll(event) {
 
-  // Handle changes to database table which first empty out existing
-  // data container.
+  // Workaround for Chrome which does not let us disable event
+  // handlers (see onChange()).  If this is called when element
+  // container is empty, focus is NaN with associated error msgs.
 
   if (CS.count === 0) return
 
@@ -919,30 +922,6 @@ function makeCanvas(buffer, imageWidth, imageHeight, label, index) {
   return canvas
 }
 
-// /********************************************************************
-//  *  Poor man's presentation of digit images.
-//  *
-//  *  TODO: Adjust aspect ratio for better simulation.
-//  *
-//  *  @param {number} width image width in pixels
-//  *  @param {number} height image height in pixels
-//  *  @param {ArrayBuffer} data image data, raw bytes
-//  */
-// function logImage(width, height, data) {
-//   let thing = '\n' + '-'.repeat(width + 2)
-//   for (let y = 0; y < height; ++y) {
-//     thing += '\n'
-//     for (let x = 0; x < width; ++x) {
-//       if (x === 0) thing += '|'
-//       const byte = data[y * 28 + x]
-//       thing += byte ? 'X' : ' '
-//       if (x === width - 1) thing += '|'
-//     }
-//   }
-//   thing += '\n' + '-'.repeat(width + 2)
-//   console.log(thing)
-// }
-
 /********************************************************************
  *
  *  Method loads database elements specified by a given range into
@@ -1076,6 +1055,36 @@ function getDatabase() {
   })
 }
 
+/* __END__
+
+  Old notes.  Delete after some date.
+
+*/
+
+// /********************************************************************
+//  *  Poor man's presentation of digit images.
+//  *
+//  *  TODO: Adjust aspect ratio for better simulation.
+//  *
+//  *  @param {number} width image width in pixels
+//  *  @param {number} height image height in pixels
+//  *  @param {ArrayBuffer} data image data, raw bytes
+//  */
+// function logImage(width, height, data) {
+//   let thing = '\n' + '-'.repeat(width + 2)
+//   for (let y = 0; y < height; ++y) {
+//     thing += '\n'
+//     for (let x = 0; x < width; ++x) {
+//       if (x === 0) thing += '|'
+//       const byte = data[y * 28 + x]
+//       thing += byte ? 'X' : ' '
+//       if (x === width - 1) thing += '|'
+//     }
+//   }
+//   thing += '\n' + '-'.repeat(width + 2)
+//   console.log(thing)
+// }
+
 // function _getDatabase(resolve, reject) {
 //   var xhr = new XMLHttpRequest();
 //   xhr.open("POST", '/getDatabase');
@@ -1089,8 +1098,3 @@ function getDatabase() {
 //   }
 //   xhr.send()
 // }
-
-/* __END__
-
-
-*/
