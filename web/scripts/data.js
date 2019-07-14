@@ -26,24 +26,24 @@
  */
 const debug = 0x00
 
-// MNIST databases on server.
-// getDatabase() loads this at startup.
+// MNIST databases on server.  getDatabase() loads this
+// at startup and comments below show what it will look like.
 
-let database = {
-  training: {
-    table: 'training',
-    length: NaN,    // Number of elements in database.
-    width: NaN,     // Width of one image (in bytes).
-    height: NaN,    // Height of one image (in bytes).
-  },
-  testing: {
-    table: 'testing',
-    length: NaN,    // Number of elements in database.
-    width: NaN,     // Width of one image (in bytes).
-    height: NaN,    // Height of one image (in bytes).
-  }
-}
-let dbData = database.training // Active scrollbar database.
+let database = null // {
+//   training: {
+//     table: 'training',
+//     length: NaN,     // Number of elements in database.
+//     width: NaN,      // Width of one image (in bytes).
+//     height: NaN,     // Height of one image (in bytes).
+//   },
+//   testing: {
+//     table: 'testing',
+//     length: NaN,     // Number of elements in database.
+//     width: NaN,      // Width of one image (in bytes).
+//     height: NaN,     // Height of one image (in bytes).
+//   }
+// }
+let dbTable = null      // Active scrollbar database table.
 
 // Webpage #data widgets.
 
@@ -404,7 +404,7 @@ class State {
    *  This method checks the following conditions:
    *
    *  - `index` may be parsed to an integer
-   *  - `0 <= index < database.length`
+   *  - `0 <= index < dbTable.length`
    *
    *  If all tests pass, method returns `floor(index)`,
    *  a nearest integer, which caller should use for
@@ -423,7 +423,7 @@ class State {
 
     // If database not yet set, fake it.
 
-    const limit = database.length ? database.length : Infinity
+    const limit = dbTable.length ? dbTable.length : Infinity
 
     // Clamp data if requested (looser validation).
 
@@ -560,21 +560,65 @@ const CS = new State() // The current state, only one so far.
  */
 function initData() {
 
+  // Remember where canvas container lives.
+
   container = document.querySelector('#data .elements')
   container.addEventListener('scroll', onScroll)
 
-  indexInput = document.getElementById('index')
+  // Remember location of database element offset
+  // and its button that loads data at that offset.
 
+  indexInput = document.getElementById('index')
   const goButton = document.getElementById('goButton')
   goButton.addEventListener('click', onClick)
 
+  // Remember Spock.
+
   dbSelector = document.getElementById('table')
-  dbSelector.addEventListener('change', function (event) {
-    const table = dbSelector.value.toLowerCase()
-    dbData = database[table]
-    //getDatabase(dbSelector.value)
+  dbSelector.addEventListener('change', onChange)
+
+  // Load database metadata, then load initial data.
+
+  getDatabase().then(() => {
+    onChange()
   })
-  getDatabase()
+}
+
+/********************************************************************
+ *  **onchange** event handler that lets user scroll through
+ *  a different database table.
+ */
+function onChange(event) {
+  const table = dbSelector.value.toLowerCase()
+  dbTable = database[table]
+  /*
+   * Clear out old data, fetch new data. This appeared to
+   * disable scrolling yesterday, now its fine, go figure..
+   */
+  while (CS.count)
+    CS.pop()
+  /*
+   * Set an initial buffer size.
+   */
+  CS.length = CS.countHint('smaller')
+  /*
+   *  Fetch new data.
+   */
+  getElements(table).then(finalFocus => {
+    indexInput.value = 0
+  })
+  /*
+   * This is lost sometimes after DB change.  Perhaps caused
+   * by emptying the container so nothing to scroll?  And
+   * remove/add here does not always fix.  Perhaps we must
+   * create a new container everytime we change databases?
+   * Or postpone subsequent add() until next time slot?
+   * BTW, this happens in Chrome, have not reproduced in
+   * Safari yet, go Safari.
+   */
+  container.removeEventListener('scroll', onScroll)
+  container.addEventListener('scroll', onScroll)
+
 }
 
 /********************************************************************
@@ -602,8 +646,8 @@ function onClick(event) {
 
   if (begin < 0)
     begin = 0
-  else if (begin + count > database.length)
-    begin = database.length - count
+  else if (begin + count > dbTable.length)
+    begin = dbTable.length - count
 
   // If nothing can be improved, all we can do is focus on input index.
 
@@ -630,10 +674,10 @@ function onClick(event) {
 
   // Run final sanity check and load data.
 
-  if (!(0 <= begin && 0 < count && begin + count <= database.length))
+  if (!(0 <= begin && 0 < count && begin + count <= dbTable.length))
     return
 
-  getElements(database.table, begin, count, prepend)
+  getElements(dbTable.table, begin, count, prepend)
     .then(finalFocus => {
       CS.focus = index  // Place input index at left of view.
     })
@@ -650,9 +694,15 @@ function onClick(event) {
  */
 function onScroll(event) {
 
+  // Handle changes to database table which first empty out existing
+  // data container.
+
+  if (CS.count === 0) return
+
   // Database coordinates: elements [begin, begin + count).
 
   const focus = CS.focus // Update displayed location.
+  console.log(`onScroll: CS.count is ${CS.count}, focus is ${focus}`)
   indexInput.value = Math.round(focus)
 
   // Scroll coordinates: pixels [0, scroll.width).
@@ -716,7 +766,7 @@ function onScroll(event) {
     newScrollLeft = scroll.width - client.width - CS.bias.catch
 
   } else if (scroll.width - scroll.right < CS.bias.throw
-    && CS.begin < database.length - CS.count) {
+    && CS.begin < dbTable.length - CS.count) {
 
     if (debug & 0x10) log('append')
     newScrollLeft = CS.bias.catch
@@ -740,7 +790,7 @@ function onScroll(event) {
 
   let begin = sx2dx(scroll.left - newScrollLeft)
   let count = CS.count
-  begin = Math.round(Math.max(0, Math.min(begin, database.length - count)))
+  begin = Math.round(Math.max(0, Math.min(begin, dbTable.length - count)))
   let prepend = (begin < CS.begin) ? true : false
 
   let end = begin + count - 1
@@ -752,14 +802,14 @@ function onScroll(event) {
   }
   if (count === 0)
     return // Small changes, begin === CS.begin, ignore.
-  if (!(0 <= begin && 0 < count && begin + count <= database.length)) {
+  if (!(0 <= begin && 0 < count && begin + count <= dbTable.length)) {
     console.error(`Tell me this is not happening: begin=${begin}, count=${count}`)
     return
   }
 
   // All that for a little fetch...
 
-  getElements(database.table, begin, count, prepend)
+  getElements(dbTable.table, begin, count, prepend)
     .then(finalFocus => CS.focus = finalFocus)
     .catch(err => console.error(err))
 }
@@ -912,7 +962,7 @@ function getElements(table, begin = 0, count = null, prepend = false) {
       _getElements(_resolve, _reject, table, begin, count, prepend)
     })
       .then(finalFocus => {
-        // console.log(`GE: finalFocus is ${finalFocus}`)
+        console.log(`GE: finalFocus is ${finalFocus}`)
         CS.refresh()
         resolve(finalFocus)
       })
@@ -1005,107 +1055,40 @@ function _getElements(resolve, reject, table, begin, count, prepend) {
 }
 
 /********************************************************************
- *  Method loads database table meta-info into database object
+ *  Method loads database metadata into database object
  *  at top of this file.
- *
- *  @param {*} table name of database table to load
  */
-function getDatabase(table = 'training') {
-
-  // // Fake this during server switchover to Database and Index.
-
-  // switch (table.toLowerCase()) {
-  //   default: // fall through
-  //   case 'training':
-  //     database.table = 'training'
-  //     database.length = 60000
-  //     break
-  //   case 'testing':
-  //     database.table = 'testing'
-  //     database.length = 10000
-  //     break
-  // }
-
-  // // Set an initial buffer size.
-
-  // CS.length = CS.countHint('smaller')
-
-  // // Fetch initial scrollbar data.
-
-  // getElements('training', 0, CS.length)
-
-  // return
-
+function getDatabase() {
   return new Promise((resolve, reject) => {
-    new Promise((_resolve, _reject) => {
-
-      _getDatabase(_resolve, _reject /*, table */)
-
-    }).then(chatter => {
-
-      /*
-       * Clear out old data, fetch new data. This appeared to
-       * disable scrolling yesterday, now its fine, go figure..
-       */
-      while (CS.count)
-        CS.pop()
-      /*
-       * Set an initial buffer size.
-       */
-      CS.length = CS.countHint('smaller')
-      /*
-       *  Fetch new data.
-       *
-       *  (Maybe decouple this in future, let caller decide
-       *  what's next...)
-       */
-      getElements()
-      /*
-       * This is lost sometimes after DB change.  Perhaps caused
-       * by emptying the container so nothing to scroll?  And
-       * remove/add here does not always fix.  Perhaps we must
-       * create a new container everytime we change databases?
-       * Or postpone subsequent add() until next time slot?
-       * BTW, this happens in Chrome, have not reproduced in
-       * Safari yet, go Safari.
-       */
-      container.removeEventListener('scroll', onScroll)
-      container.addEventListener('scroll', onScroll)
-    })
+    if (database != null)
+      resolve(database)  // Once is sufficient.
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", '/getDatabase');
+    xhr.setRequestHeader('Content-Type', 'text/plain')
+    xhr.onload = function (event) {
+      if (xhr.status !== 200) {
+        reject(`Trouble getting database metadata: ${xhr.responseText}`)
+      } else {
+        resolve(database = JSON.parse(xhr.response))
+      }
+    }
+    xhr.send()
   })
 }
 
-function _getDatabase(resolve, reject /*, table*/) {
-
-  var xhr = new XMLHttpRequest();
-  xhr.open("POST", '/getDatabase');
-  xhr.setRequestHeader('Content-Type', 'text/plain')
-  // const params = new URLSearchParams()
-  // params.append('table', table)
-
-  xhr.onload = function (event) {
-    if (xhr.status !== 200) {
-      reject(`Trouble setting database to '${table}': ${xhr.responseText}`)
-    } else {
-      const body = JSON.parse(xhr.response)
-      database.table = table
-      const lines = xhr.response.split('\n')
-      lines.forEach(line => {
-        if (line.length > 0) {
-          const [key, value] = line.split('=')
-          database[key] = value  // Loose as the goose.
-        }
-      })
-      database.length = parseInt(database.length)
-      if (debug & 0x04) {
-        console.debug(`set database = %o`, database)
-      }
-      resolve('_setData resolved')
-    }
-  }
-
-  xhr.send()
-}
+// function _getDatabase(resolve, reject) {
+//   var xhr = new XMLHttpRequest();
+//   xhr.open("POST", '/getDatabase');
+//   xhr.setRequestHeader('Content-Type', 'text/plain')
+//   xhr.onload = function (event) {
+//     if (xhr.status !== 200) {
+//       reject(`Trouble getting database metadata: ${xhr.responseText}`)
+//     } else {
+//       resolve(database = JSON.parse(xhr.response))
+//     }
+//   }
+//   xhr.send()
+// }
 
 /* __END__
 
