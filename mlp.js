@@ -43,16 +43,17 @@ const server = http.createServer((request, response) => {
 
         // Use conservative defaults if input is skunky.
         const usp = new URLSearchParams(body)
+        const table = usp.has('table') ? usp.get('table') : 'training'
         const begin = usp.has('begin') ? usp.get('begin') : 0
         const count = usp.has('count') ? usp.get('count') : 1
-        xhr.getElements(request, response, begin, count)
+        xhr.getElements(request, response, table, begin, count)
 
       } else if (url === '/setDatabase') {
 
         const usp = new URLSearchParams(body)
-        const dbName = usp.has('dbName') ?
-          usp.get('dbName') : 'no db name?'
-        xhr.setDatabase(request, response, dbName)
+        const table = usp.has('table') ?
+          usp.get('table') : 'no db table name?'
+        xhr.setDatabase(request, response, table)
 
       } else {
 

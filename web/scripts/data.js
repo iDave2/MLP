@@ -1,6 +1,8 @@
 /********************************************************************
  *
- *  Image processing, fairly MNIST-specific for this project.
+ *  Image processing for MNIST environment.  This initial effort
+ *  uses XMLHttpRequest and that is retained for posterity.  Newer
+ *  packages will use newer Fetch API.
  *
  *  @see https://stackoverflow.com/questions/25520410
  *  when-setting-a-font-size-in-css-what-is-the-real-height-of-
@@ -53,8 +55,8 @@ let dbSelector = null   // Database selector (training, testing).
  *  - Client area: the visible portion, **cx** in [0, client.width),
  *    of scroll buffer, a few hundred pixels.
  *
- *  Consider a database with 60,000 elements, a scroll buffer of 3,000
- *  pixels holding elements with database indices `begin` to
+ *  Consider a database with 60,000 elements, a scroll buffer 3,000
+ *  pixels wide holding elements with database indices `begin` to
  *  `begin + count`, and client area with 800 pixels.  It is helpful
  *  to remember what domain -> range looks like in this case,
  *  ```javascript
@@ -99,7 +101,7 @@ class State {
 
     this._begin = NaN   // Index (int) of first element.
 
-    this._length = NaN // Buffer size in elements.
+    this._length = NaN  // Buffer size in elements.
 
     // Common transform factors.
 
@@ -556,11 +558,20 @@ function initData() {
   const goButton = document.getElementById('goButton')
   goButton.addEventListener('click', onClick)
 
-  dbSelector = document.getElementById('dbName')
-  dbSelector.addEventListener('change', function (event) {
-    setDatabase(dbSelector.value)
-  })
-  setDatabase(dbSelector.value)
+  dbSelector = document.getElementById('table')
+  // dbSelector.addEventListener('change', function (event) {
+  //   setDatabase(dbSelector.value)
+  // })
+  // setDatabase(dbSelector.value)
+
+  // Set an initial buffer size.
+
+  CS.length = CS.countHint('smaller')
+
+  // Fetch initial scrollbar data.
+
+  getElements('training', 0, CS.length)
+
 }
 
 /********************************************************************
@@ -885,15 +896,16 @@ function makeCanvas(buffer, imageWidth, imageHeight, label, index) {
  *  elements; caller specifies whether she wants to append or
  *  prepend the new elements to an existing buffer.
  *
- * @param {*} begin element starting index
- * @param {*} count number of elements to load
- * @param {*} prepend set *true* if prepending; else default is *false*
+ * @param {string} table database table, 'training' or 'testing'
+ * @param {number} begin element starting index
+ * @param {number} count number of elements to load
+ * @param {boolean} prepend set *true* if prepending; else default is *false*
  */
-function getElements(begin = 0, count = null, prepend = false) {
+function getElements(table, begin = 0, count = null, prepend = false) {
   return new Promise((resolve, reject) => {
     new Promise((_resolve, _reject) => {
       // console.debug(`getElements(${begin}, ${count}, ${prepend})`)
-      _getElements(_resolve, _reject, begin, count, prepend)
+      _getElements(_resolve, _reject, table, begin, count, prepend)
     })
       .then(finalFocus => {
         // console.log(`GE: finalFocus is ${finalFocus}`)
@@ -903,7 +915,7 @@ function getElements(begin = 0, count = null, prepend = false) {
   })
 }
 
-function _getElements(resolve, reject, begin, count, prepend) {
+function _getElements(resolve, reject, table, begin, count, prepend) {
 
   // Validate and/or clamp input (may crash).
 
@@ -931,14 +943,11 @@ function _getElements(resolve, reject, begin, count, prepend) {
   xhr.open("POST", '/getElements');
   xhr.setRequestHeader('Content-type', 'text/plain')
   xhr.responseType = "arraybuffer";
-  // const params = new URLSearchParams()
-  // params.append('begin', begin)
-  // params.append('count', count)
-  var form = {
+  const params = new URLSearchParams({
+    table: table,
     begin: begin,
     count: count,
-  }
-  const params = new URLSearchParams(form)
+  })
 
   /*
    *  Node seems to return all requested elements in one fell
@@ -994,13 +1003,13 @@ function _getElements(resolve, reject, begin, count, prepend) {
 /********************************************************************
  *  Method sets database to the given name and loads initial buffer.
  *
- *  @param {*} dbName name of database to load
+ *  @param {*} table name of database table to load
  */
-function setDatabase(dbName = 'training') {
+function setDatabase(table = 'training') {
   return new Promise((resolve, reject) => {
     new Promise((_resolve, _reject) => {
 
-      _setDatabase(_resolve, _reject, dbName)
+      _setDatabase(_resolve, _reject, table)
 
     }).then(chatter => {
       // console.log(`SD: chatter = "${chatter}"`)
@@ -1023,7 +1032,7 @@ function setDatabase(dbName = 'training') {
       getElements()
       /*
        * This is lost sometimes after DB change.  Perhaps caused
-       * be emptying the container so nothing to scroll?  And
+       * by emptying the container so nothing to scroll?  And
        * remove/add here does not always fix.  Perhaps we must
        * create a new container everytime we change databases?
        * Or postpone subsequent add() until next time slot?
@@ -1036,21 +1045,21 @@ function setDatabase(dbName = 'training') {
   })
 }
 
-function _setDatabase(resolve, reject, dbName) {
+function _setDatabase(resolve, reject, table) {
 
-  if (dbName) dbName = dbName.toLowerCase()
+  if (table) table = table.toLowerCase()
 
   var xhr = new XMLHttpRequest();
   xhr.open("POST", '/setDatabase');
   xhr.setRequestHeader('Content-Type', 'text/plain')
   const params = new URLSearchParams()
-  params.append('dbName', dbName)
+  params.append('table', table)
 
   xhr.onload = function (event) {
     if (xhr.status !== 200) {
-      reject(`Trouble setting database to '${dbName}': ${xhr.responseText}`)
+      reject(`Trouble setting database to '${table}': ${xhr.responseText}`)
     } else {
-      database.name = dbName
+      database.name = table
       const lines = xhr.response.split('\n')
       lines.forEach(line => {
         if (line.length > 0) {
