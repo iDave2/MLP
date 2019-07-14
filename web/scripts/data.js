@@ -24,15 +24,15 @@
  *    0x40 - dump current state on click Go
  *    0x80 - watch countHint() and its computation
  */
-const debug = 0x01
+const debug = 0x00
 
 // MNIST databases on server.
 
 const database = {
-  name: null,     // 'training' or 'testing'
-  count: null,    // Number of elements in database.
-  height: null,   // Height of one image (in bytes).
-  width: null,    // Width of one image (in bytes).
+  table: null,    // 'training' or 'testing'
+  length: NaN,    // Number of elements in database.
+  height: 28,     // Height of one image (in bytes).
+  width: 28,      // Width of one image (in bytes).
 }
 
 // Webpage #data widgets.
@@ -394,7 +394,7 @@ class State {
    *  This method checks the following conditions:
    *
    *  - `index` may be parsed to an integer
-   *  - `0 <= index < database.count`
+   *  - `0 <= index < database.length`
    *
    *  If all tests pass, method returns `floor(index)`,
    *  a nearest integer, which caller should use for
@@ -413,7 +413,7 @@ class State {
 
     // If database not yet set, fake it.
 
-    const limit = database.count ? database.count : Infinity
+    const limit = database.length ? database.length : Infinity
 
     // Clamp data if requested (looser validation).
 
@@ -559,19 +559,10 @@ function initData() {
   goButton.addEventListener('click', onClick)
 
   dbSelector = document.getElementById('table')
-  // dbSelector.addEventListener('change', function (event) {
-  //   setDatabase(dbSelector.value)
-  // })
-  // setDatabase(dbSelector.value)
-
-  // Set an initial buffer size.
-
-  CS.length = CS.countHint('smaller')
-
-  // Fetch initial scrollbar data.
-
-  getElements('training', 0, CS.length)
-
+  dbSelector.addEventListener('change', function (event) {
+    setDatabase(dbSelector.value)
+  })
+  setDatabase(dbSelector.value)
 }
 
 /********************************************************************
@@ -599,8 +590,8 @@ function onClick(event) {
 
   if (begin < 0)
     begin = 0
-  else if (begin + count > database.count)
-    begin = database.count - count
+  else if (begin + count > database.length)
+    begin = database.length - count
 
   // If nothing can be improved, all we can do is focus on input index.
 
@@ -627,10 +618,10 @@ function onClick(event) {
 
   // Run final sanity check and load data.
 
-  if (!(0 <= begin && 0 < count && begin + count <= database.count))
+  if (!(0 <= begin && 0 < count && begin + count <= database.length))
     return
 
-  getElements(begin, count, prepend)
+  getElements(database.table, begin, count, prepend)
     .then(finalFocus => {
       CS.focus = index  // Place input index at left of view.
     })
@@ -677,6 +668,7 @@ function onScroll(event) {
     message += ` (${percent}%)`
 
     // View (client) begin and end index (float).
+    // dl/dr emphasizes these are Database indices (foci).
 
     let dl = Math.floor(100 * sx2dx(scroll.left)) / 100
     let dr = Math.floor(100 * sx2dx(scroll.right)) / 100
@@ -712,7 +704,7 @@ function onScroll(event) {
     newScrollLeft = scroll.width - client.width - CS.bias.catch
 
   } else if (scroll.width - scroll.right < CS.bias.throw
-    && CS.begin < database.count - CS.count) {
+    && CS.begin < database.length - CS.count) {
 
     if (debug & 0x10) log('append')
     newScrollLeft = CS.bias.catch
@@ -736,7 +728,7 @@ function onScroll(event) {
 
   let begin = sx2dx(scroll.left - newScrollLeft)
   let count = CS.count
-  begin = Math.round(Math.max(0, Math.min(begin, database.count - count)))
+  begin = Math.round(Math.max(0, Math.min(begin, database.length - count)))
   let prepend = (begin < CS.begin) ? true : false
 
   let end = begin + count - 1
@@ -748,14 +740,14 @@ function onScroll(event) {
   }
   if (count === 0)
     return // Small changes, begin === CS.begin, ignore.
-  if (!(0 <= begin && 0 < count && begin + count <= database.count)) {
+  if (!(0 <= begin && 0 < count && begin + count <= database.length)) {
     console.error(`Tell me this is not happening: begin=${begin}, count=${count}`)
     return
   }
 
   // All that for a little fetch...
 
-  getElements(begin, count, prepend)
+  getElements(database.table, begin, count, prepend)
     .then(finalFocus => CS.focus = finalFocus)
     .catch(err => console.error(err))
 }
@@ -919,7 +911,7 @@ function _getElements(resolve, reject, table, begin, count, prepend) {
 
   // Validate and/or clamp input (may crash).
 
-  begin = State.validateIndex(begin)
+  //begin = State.validateIndex(begin)
 
   if (count === null)
     count = CS.countHint()
@@ -929,7 +921,7 @@ function _getElements(resolve, reject, table, begin, count, prepend) {
   // Cache common dimensions.
 
   const headerSize = 4  // Header contains label.
-  const imageSize = database.width * database.height // 28x28
+  const imageSize = 28 * 28 // database.width * database.height // 28x28
   const elementSize = headerSize + imageSize
   const requestSize = elementSize * count
 
@@ -1006,6 +998,31 @@ function _getElements(resolve, reject, table, begin, count, prepend) {
  *  @param {*} table name of database table to load
  */
 function setDatabase(table = 'training') {
+
+  // Fake this during server switchover to Database and Index.
+
+  switch (table.toLowerCase()) {
+    default: // fall through
+    case 'training':
+      database.table = 'training'
+      database.length = 60000
+      break
+    case 'testing':
+      database.table = 'testing'
+      database.length = 10000
+      break
+  }
+
+  // Set an initial buffer size.
+
+  CS.length = CS.countHint('smaller')
+
+  // Fetch initial scrollbar data.
+
+  getElements('training', 0, CS.length)
+
+  return
+
   return new Promise((resolve, reject) => {
     new Promise((_resolve, _reject) => {
 
@@ -1059,7 +1076,7 @@ function _setDatabase(resolve, reject, table) {
     if (xhr.status !== 200) {
       reject(`Trouble setting database to '${table}': ${xhr.responseText}`)
     } else {
-      database.name = table
+      database.table = table
       const lines = xhr.response.split('\n')
       lines.forEach(line => {
         if (line.length > 0) {
@@ -1067,7 +1084,7 @@ function _setDatabase(resolve, reject, table) {
           database[key] = value  // Loose as the goose.
         }
       })
-      database.count = parseInt(database.count)
+      database.length = parseInt(database.length)
       if (debug & 0x04) {
         console.debug(`set database = %o`, database)
       }
