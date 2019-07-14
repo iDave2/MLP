@@ -1,6 +1,6 @@
 {
   "name": "mlp",
-  "version": "0.1.0",
+  "version": "0.2",
   "description": "Multilayer Perceptron (demo)",
   "main": "mlp.js",
   "scripts": {
